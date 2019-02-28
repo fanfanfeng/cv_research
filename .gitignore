@@ -1,0 +1,15 @@
+.idea/
+.py*
+data/
+model/
+model_save/
+graph/
+*test.py
+*-abk*
+__pycache__
+*-bak
+checkpoint/
+logs/
+*.png
+tmp/
+*.tflite
