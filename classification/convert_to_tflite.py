@@ -60,9 +60,22 @@ def convert_pb_to_tflite():
     open("converted_model.tflite", "wb").write(tflite_model)
 
 
+def conver_smooth_to_tflite():
+    '''吸烟模型'''
+    model_path = r'/data/python_project/cv_research/smooth/smoking-faces-output-graph.pb'
+    input_arrays = ['input']
+    output_arrays = ['final_result']
+
+    converter = tf.contrib.lite.TFLiteConverter.from_frozen_graph(
+        model_path, input_arrays, output_arrays)
+
+    tflite_model = converter.convert()
+    open("smooth_model.tflite", "wb").write(tflite_model)
+
+
 def error_msg():
     msg = b"\xb2\xbb\xca\xc7\xc4\xda\xb2\xbf\xbb\xf2\xcd\xe2\xb2\xbf\xc3\xfc\xc1\xee\xa3\xac\xd2\xb2\xb2\xbb\xca\xc7\xbf\xc9\xd4\xcb\xd0\xd0\xb5\xc4\xb3\xcc\xd0\xf2\r\n\xbb\xf2\xc5\xfa\xb4\xa6\xc0\xed\xce\xc4\xbc\xfe\xa1\xa3"
     print(msg.decode('gbk'))
 if __name__ == '__main__':
-    error_msg()
-    convert_pb_to_tflite()
+
+    conver_smooth_to_tflite()
