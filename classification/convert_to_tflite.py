@@ -1,30 +1,20 @@
 # create by fanfan on 2019/1/24 0024
 import tensorflow as tf
-import sys
+import argparse
 
 
 import os
 
-model_dir = 'tmp'
-architecture = 'mobilenet_v1_1.0_224'
 
 model_info ={}
-model_info['model_file_name'] = 'output_graph.pb'
-model_info['model_label_file_name'] = os.path.join(model_dir,"output_labels.txt")
-
-
 model_info['final_result'] = 'final_result:0'
-model_info['image_input'] = 'DecodeJPGInput:0'
-if architecture == 'inception_v3':
-    model_info['BottleneckInputPlaceholder'] = 'input/BottleneckInputPlaceholder:0'
-    model_info['resized_input_tensor_name'] = 'Mul:0'
-    model_info['bottleneck_tensor_name'] = 'pool_3/_reshape:0'
-    model_info['image_decode_input'] = 'Mul_1:0'
-else:
-    model_info['BottleneckInputPlaceholder'] = 'input_1/BottleneckInputPlaceholder:0'
-    model_info['image_decode_input'] = 'Mul:0'
-    model_info['resized_input_tensor_name'] = 'input:0'
-    model_info['bottleneck_tensor_name'] = 'MobilenetV1/Predictions/Reshape:0'
+model_info['inception_v3'] = {}
+model_info['mobilenet'] = {}
+# inceptionv3 输入输出节点的名称
+model_info['inception_v3']['resized_input_tensor_name'] = 'Mul:0'
+# mobilenet 输入输出节点的名称
+model_info['mobilenet']['resized_input_tensor_name'] = 'input:0'
+
 def sample_convert_tflite():
     img = tf.placeholder(name="img", dtype=tf.float32, shape=(1, 64, 64, 3))
     var = tf.get_variable("weights", dtype=tf.float32, shape=(1, 64, 64, 3))
@@ -39,10 +29,9 @@ def sample_convert_tflite():
 
 from tensorflow.contrib.lite.toco.types_pb2 import QUANTIZED_UINT8,FLOAT
 
-def convert_pb_to_tflite():
-    model_path = os.path.join(model_dir, model_info['model_file_name'])
-    input_arrays = [model_info['resized_input_tensor_name'].replace(":0","")]
-    output_arrays = [model_info['final_result'].replace(":0","")]
+def convert_pb_to_tflite_quate(model_path,input_name,output_name,output_tflite,use_quote=False):
+    input_arrays = [input_name.replace(":0","")]
+    output_arrays = [output_name.replace(":0","")]
     input_shapes = [(1,224,224,3)]
     input_shapes_dict = {}
     for shape,name in zip(input_shapes,input_arrays):
@@ -50,14 +39,16 @@ def convert_pb_to_tflite():
 
     converter = tf.contrib.lite.TFLiteConverter.from_frozen_graph(
         model_path, input_arrays, output_arrays,input_shapes_dict)
-    converter.inference_type = QUANTIZED_UINT8
-    #converter.inference_input_type = FLOAT
-    print(converter.inference_input_type) 
-    converter.quantized_input_stats = {model_info['resized_input_tensor_name'].replace(":0",""): (127.5, 127.5)}
-    converter.default_ranges_stats = (0, 6)
+
+    if use_quote:
+        converter.inference_type = QUANTIZED_UINT8
+        converter.quantized_input_stats = {input_name.replace(":0",""): (127.5, 127.5)}
+        converter.default_ranges_stats = (0, 6)
 
     tflite_model = converter.convert()
-    open("converted_model.tflite", "wb").write(tflite_model)
+    open(output_tflite, "wb").write(tflite_model)
+
+
 
 
 def conver_smooth_to_tflite():
@@ -73,9 +64,31 @@ def conver_smooth_to_tflite():
     open("smooth_model.tflite", "wb").write(tflite_model)
 
 
-def error_msg():
-    msg = b"\xb2\xbb\xca\xc7\xc4\xda\xb2\xbf\xbb\xf2\xcd\xe2\xb2\xbf\xc3\xfc\xc1\xee\xa3\xac\xd2\xb2\xb2\xbb\xca\xc7\xbf\xc9\xd4\xcb\xd0\xd0\xb5\xc4\xb3\xcc\xd0\xf2\r\n\xbb\xf2\xc5\xfa\xb4\xa6\xc0\xed\xce\xc4\xbc\xfe\xa1\xa3"
-    print(msg.decode('gbk'))
-if __name__ == '__main__':
 
-    conver_smooth_to_tflite()
+def get_args():
+    '''
+    参数解析器，获取执行的参数
+    :return: 
+    '''
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-output_dir",type=str,default="tmp",help="处理以后的输出目录")
+    parser.add_argument("-output_name", type=str, default="graph.lite", help="输出的tflite文件名")
+    parser.add_argument('-use_quote',action='store_true',default=False,help='是否转化为quote的模型')
+    parser.add_argument('-input_pb_dir',type=str,default="tmp",help="带转化pb模型文件目录")
+    parser.add_argument('-input_pb_name', type=str, default="output_graph.pb", help="带转name化pb模型文件目录")
+    parser.add_argument('-architecture',type=int,default=0,help="0 代表mobienet ,1代表inception")
+    return  parser.parse_args()
+
+if __name__ == '__main__':
+    argv = get_args()
+
+    pb_model_path = os.path.join(argv.input_pb_dir,argv.input_pb_name)
+    output_lite_path = os.path.join(argv.output_dir,argv.output_name)
+    use_quote = argv.use_quote
+    if argv.architecture == 0:
+        input_node_name = model_info['mobilenet']['resized_input_tensor_name']
+    else:
+        input_node_name = model_info['inception_v3']['resized_input_tensor_name']
+    output_node_name = model_info['final_result']
+
+    convert_pb_to_tflite_quate(model_path=pb_model_path,input_name=input_node_name,output_name=output_node_name,output_tflite=output_lite_path,use_quote=use_quote)
