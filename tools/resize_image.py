@@ -67,7 +67,7 @@ def changeImageSize(imageRoot,resultRoot,reSize):
             new_cagegory_path = os.path.join(resultPicRoot, category)
             mkdir(new_cagegory_path)
             for i_file in files_dict[category]:
-                if 'png' in i_file :
+                if 'png' in i_file or 'jpg' in i_file :
                     img = Image.open(i_file)
                     width_origin, height_origin = img.size
 
